@@ -102,15 +102,35 @@
       min-height: 20px;
       text-align: center;
     }
-    #status.loading {
-      color: #ffb74d;
+    #status.loading { color: #ffb74d; }
+    #status.success { color: #66bb6a; }
+    #status.error { color: #ef5350; }
+    .progress-container {
+      width: 100%;
+      background: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 1rem;
     }
-    #status.success {
-      color: #66bb6a;
+    .progress-bar {
+      height: 20px;
+      width: 0%;
+      background: #4caf50;
+      text-align: center;
+      font-size: 0.8rem;
+      color: white;
+      transition: width 0.3s;
     }
-    #status.error {
-      color: #ef5350;
+    #statusList {
+      margin-top: 1rem;
+      text-align: left;
+      font-size: 0.85rem;
+      max-height: 200px;
+      overflow-y: auto;
     }
+    #statusList div.success { color: #66bb6a; }
+    #statusList div.skipped { color: #888; }
+    #statusList div.error { color: #ef5350; }
     footer {
       margin-top: 2rem;
       font-size: 0.75rem;
@@ -152,6 +172,10 @@
     </section>
 
     <div id="status"></div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+    <div id="statusList"></div>
   </div>
 
   <footer>
@@ -159,140 +183,130 @@
   </footer>
 
   <script>
-    // ✅ Use relative path (same domain, avoids CSP issues)
     const API_BASE = "/api/fno-bhavcopy";
-
-    // Limit max date to today
     const today = new Date().toISOString().split("T")[0];
     ["singleDate", "fromDate", "toDate", "pickDate"].forEach(id => {
       document.getElementById(id).max = today;
     });
 
     const status = document.getElementById("status");
+    const progressBar = document.getElementById("progressBar");
+    const statusList = document.getElementById("statusList");
 
-    async function fetchAndDownload(dateStr) {
-      const url = `${API_BASE}?date_str=${dateStr}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Unavailable: ${dateStr}`);
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = `fno_bhavcopy_${dateStr}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    function updateProgress(completed, total) {
+      const percent = Math.round((completed / total) * 100);
+      progressBar.style.width = percent + "%";
+      progressBar.textContent = percent + "%";
+    }
+
+    function addStatus(date, msg, cls) {
+      const row = document.createElement("div");
+      row.textContent = `${date}: ${msg}`;
+      row.className = cls;
+      statusList.appendChild(row);
     }
 
     function formatDate(date) {
       return date.toISOString().split("T")[0];
     }
 
-    // 1. Single Date
+    async function fetchAndDownload(dateStr) {
+      const response = await fetch(`${API_BASE}?date_str=${dateStr}`);
+      if (!response.ok) throw new Error("Unavailable");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fno_bhavcopy_${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    // ---- SINGLE DATE ----
     async function downloadSingle() {
       const date = document.getElementById("singleDate").value;
-      if (!date) {
-        status.textContent = "⚠️ Select a date.";
-        status.className = "error";
-        return;
-      }
+      if (!date) return;
       try {
         status.textContent = "⏳ Fetching...";
         status.className = "loading";
         await fetchAndDownload(date);
         status.textContent = "✅ Download complete.";
         status.className = "success";
-      } catch (err) {
-        status.textContent = `❌ ${err.message}`;
+      } catch {
+        status.textContent = "❌ File unavailable.";
         status.className = "error";
       }
     }
 
-    // 2. Date Range
+    // ---- RANGE ----
     async function downloadRange() {
       const fromDate = document.getElementById("fromDate").value;
       const toDate = document.getElementById("toDate").value;
-
-      if (!fromDate || !toDate) {
-        status.textContent = "⚠️ Select both dates.";
-        status.className = "error";
-        return;
-      }
+      if (!fromDate || !toDate) return;
 
       const from = new Date(fromDate);
       const to = new Date(toDate);
-
-      if (from > to) {
-        status.textContent = "⚠️ From Date cannot be after To Date.";
-        status.className = "error";
-        return;
-      }
+      if (from > to) return;
 
       let current = new Date(from);
-      let count = 0;
-      status.textContent = "⏳ Downloading range...";
-      status.className = "loading";
-
-      try {
-        while (current <= to) {
-          const dateStr = formatDate(current);
-          try {
-            await fetchAndDownload(dateStr);
-            count++;
-          } catch (err) {
-            console.warn(err.message);
-          }
-          current.setDate(current.getDate() + 1);
-        }
-        status.textContent = `✅ Downloaded ${count} file(s).`;
-        status.className = "success";
-      } catch (err) {
-        status.textContent = "❌ Failed.";
-        status.className = "error";
+      const dates = [];
+      while (current <= to) {
+        dates.push(formatDate(current));
+        current.setDate(current.getDate() + 1);
       }
+
+      await batchDownload(dates);
     }
 
-    // 3. Arbitrary Dates
+    // ---- ARBITRARY ----
     let selectedDates = [];
-
     function addDate() {
-      const date = document.getElementById("pickDate").value;
-      if (!date) return;
-      if (!selectedDates.includes(date)) {
-        selectedDates.push(date);
+      const d = document.getElementById("pickDate").value;
+      if (d && !selectedDates.includes(d)) {
+        selectedDates.push(d);
       }
       updateDatesList();
     }
-
     function updateDatesList() {
-      const listEl = document.getElementById("datesList");
-      if (selectedDates.length === 0) {
-        listEl.textContent = "(No dates added)";
-      } else {
-        listEl.innerHTML = selectedDates.map(d => `<span>${d}</span>`).join(" ");
-      }
+      const el = document.getElementById("datesList");
+      el.innerHTML = selectedDates.length
+        ? selectedDates.map(d => `<span>${d}</span>`).join(" ")
+        : "(No dates added)";
+    }
+    async function downloadArbitrary() {
+      if (selectedDates.length === 0) return;
+      await batchDownload(selectedDates);
     }
 
-    async function downloadArbitrary() {
-      if (selectedDates.length === 0) {
-        status.textContent = "⚠️ No dates selected.";
-        status.className = "error";
-        return;
-      }
-
-      status.textContent = "⏳ Downloading files...";
+    // ---- BATCH DOWNLOAD WITH PROGRESS ----
+    async function batchDownload(dates) {
+      progressBar.style.width = "0%";
+      progressBar.textContent = "0%";
+      statusList.innerHTML = "";
+      status.textContent = "⏳ Downloading...";
       status.className = "loading";
 
-      let count = 0;
-      for (const date of selectedDates) {
-        try {
-          await fetchAndDownload(date);
-          count++;
-        } catch (err) {
-          console.warn(err.message);
+      let completed = 0;
+      const total = dates.length;
+
+      for (const d of dates) {
+        const day = new Date(d).getDay();
+        if (day === 0 || day === 6) { // Weekend
+          addStatus(d, "Skipped (Weekend)", "skipped");
+        } else {
+          try {
+            await fetchAndDownload(d);
+            addStatus(d, "Downloaded", "success");
+          } catch {
+            addStatus(d, "Unavailable", "error");
+          }
         }
+        completed++;
+        updateProgress(completed, total);
       }
-      status.textContent = `✅ Downloaded ${count} file(s).`;
+
+      status.textContent = "✅ Done. See details below.";
       status.className = "success";
     }
   </script>
