@@ -1,14 +1,14 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from datetime import datetime
 from pathlib import Path
-import os
+import io
 import zipfile
 from nse import NSE
 
 app = FastAPI()
 
-# Directory path for downloads (only needed by backend API)
+# Directory path for temporary downloads
 DOWNLOAD_DIR = Path("/tmp/downloads")
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -16,8 +16,8 @@ DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 @app.get("/api/fno-bhavcopy")
 async def get_fno_bhavcopy(date_str: str):
     """
-    Download F&O bhavcopy for given date and return it as a CSV response.
-    Example: /api/fno-bhavcopy?date_str=2025-09-26
+    Download F&O bhavcopy for given date and return it as CSV response.
+    Example: /api/fno-bhavcopy?date_str=2025-09-29
     """
     try:
         print(f"Starting download for {date_str}")
@@ -29,10 +29,14 @@ async def get_fno_bhavcopy(date_str: str):
         if not file_path.exists():
             raise FileNotFoundError(f"Downloaded file not found: {file_path}")
 
-        return FileResponse(
-            path=file_path,
+        # ✅ Read into memory first
+        csv_bytes = file_path.read_bytes()
+        buffer = io.BytesIO(csv_bytes)
+
+        return StreamingResponse(
+            buffer,
             media_type="text/csv",
-            filename=f"fno_bhavcopy_{date_str}.csv"
+            headers={"Content-Disposition": f'attachment; filename="fno_bhavcopy_{date_str}.csv"'}
         )
 
     except zipfile.BadZipFile as e:
@@ -49,6 +53,7 @@ async def get_fno_bhavcopy(date_str: str):
         print(f"Unexpected error: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
     finally:
+        # ✅ Always close session and delete temp files
         if 'nse' in locals():
             nse.exit()
         for file in DOWNLOAD_DIR.glob("*"):
@@ -66,7 +71,7 @@ def root():
 def serve_downloader():
     """
     Serve the HTML downloader frontend.
-    Make sure BHAVCOPY_DOWNLOADER.html is placed in project root.
+    Ensure BHAVCOPY_DOWNLOADER.html is placed in project root.
     """
     html_path = Path(__file__).parent / "BHAVCOPY_DOWNLOADER.html"
     if not html_path.exists():
