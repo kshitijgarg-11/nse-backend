@@ -10,24 +10,27 @@ app = FastAPI()
 
 # Environment variables from Vercel
 BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")
-BLOB_BASE_URL = "https://nse-bhavcopy-cache.public.blob.vercel-storage.com"
 
-# Local temporary directory (/tmp is ephemeral but writable in Vercel serverless functions)
+# Blob endpoints
+BLOB_ACCOUNT_URL = "https://blob.vercel-storage.com"  # private API for HEAD/PUT
+BLOB_PUBLIC_URL = "https://nse-bhavcopy-cache.public.blob.vercel-storage.com"  # public CDN for downloads
+
+# Local temp directory
 DOWNLOAD_DIR = Path("/tmp/downloads")
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 async def blob_exists(key: str) -> bool:
-    """Check if a blob exists in Vercel Blob store"""
-    url = f"{BLOB_BASE_URL}/{key}"
+    """Check if blob exists in Vercel Blob store"""
+    url = f"{BLOB_ACCOUNT_URL}/{key}"
     async with httpx.AsyncClient() as client:
         r = await client.head(url, headers={"Authorization": f"Bearer {BLOB_TOKEN}"})
         return r.status_code == 200
 
 
 async def blob_upload(key: str, data: bytes, content_type="text/csv") -> str:
-    """Upload data to Blob store and return its URL"""
-    url = f"{BLOB_BASE_URL}/{key}"
+    """Upload to Blob via private endpoint and return public URL"""
+    url = f"{BLOB_ACCOUNT_URL}/{key}"
     async with httpx.AsyncClient() as client:
         r = await client.put(
             url,
@@ -38,29 +41,27 @@ async def blob_upload(key: str, data: bytes, content_type="text/csv") -> str:
             content=data,
         )
         r.raise_for_status()
-        return url  # Public URL to the blob
+    return f"{BLOB_PUBLIC_URL}/{key}"
 
 
 @app.get("/api/fno-bhavcopy")
 async def get_fno_bhavcopy(date_str: str):
     """
-    Download F&O bhavcopy for a given date.
-    - If exists in Blob → redirect.
-    - Else fetch from NSE → upload to Blob → return to user.
-    Example: /api/fno-bhavcopy?date_str=2025-09-29
+    F&O Bhavcopy with Blob caching:
+    - If cached → redirect to public CDN
+    - Else fetch from NSE → upload to Blob → stream back
     """
     filename = f"fno_bhavcopy_{date_str}.csv"
     blob_key = f"bhavcopies/{filename}"
 
     try:
-        # 1. Cache check
+        # 1. Check Blob cache
         if await blob_exists(blob_key):
             print(f"✅ Cache hit: {blob_key}")
-            url = f"{BLOB_BASE_URL}/{blob_key}"
-            return RedirectResponse(url, status_code=302)
+            return RedirectResponse(f"{BLOB_PUBLIC_URL}/{blob_key}", status_code=302)
 
         print(f"❌ Cache miss for {date_str} → downloading from NSE...")
-        # 2. Download from NSE
+        # 2. Download new file from NSE
         date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
         nse = NSE(download_folder=str(DOWNLOAD_DIR), server=True, timeout=30)
         local_file = nse.fnoBhavcopy(datetime.combine(date_obj, datetime.min.time()))
@@ -68,14 +69,13 @@ async def get_fno_bhavcopy(date_str: str):
         if not local_file.exists():
             raise FileNotFoundError(f"NSE did not return file for {date_str}")
 
-        # Read file
         data = local_file.read_bytes()
 
-        # 3. Upload to Blob for reuse
-        await blob_upload(blob_key, data)
-        print(f"⬆️ Uploaded {blob_key} to Blob storage")
+        # 3. Upload to Blob
+        public_url = await blob_upload(blob_key, data)
+        print(f"⬆️ Uploaded {blob_key} to Blob store")
 
-        # 4. Respond to user now
+        # 4. Stream to user now
         buffer = io.BytesIO(data)
         return StreamingResponse(
             buffer,
@@ -84,11 +84,11 @@ async def get_fno_bhavcopy(date_str: str):
         )
 
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"No Bhavcopy available for {date_str}")
+        raise HTTPException(status_code=404, detail=f"No Bhavcopy for {date_str}")
     except zipfile.BadZipFile as e:
         raise HTTPException(status_code=500, detail=f"Invalid ZIP from NSE: {str(e)}")
     except Exception as e:
-        print(f"Unexpected error: {type(e).__name__} - {str(e)}")
+        print(f"Unexpected error: {type(e).__name__} → {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
     finally:
         if "nse" in locals():
@@ -100,14 +100,14 @@ async def get_fno_bhavcopy(date_str: str):
 @app.get("/")
 def root():
     return {
-        "message": "NSE F&O Bhavcopy Backend with Blob Cache is running!",
+        "message": "NSE F&O Bhavcopy Backend with Blob cache",
         "downloader_url": "/downloader",
     }
 
 
 @app.get("/downloader", response_class=HTMLResponse)
-def serve_downloader():
+def downloader():
     html_path = Path(__file__).parent / "BHAVCOPY_DOWNLOADER.html"
     if not html_path.exists():
-        raise HTTPException(status_code=404, detail="Downloader page not found")
+        raise HTTPException(status_code=404, detail="Downloader not found")
     return html_path.read_text(encoding="utf-8")
