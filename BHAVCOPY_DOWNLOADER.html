@@ -7,136 +7,158 @@
   <style>
     body {
       font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #121212;
+      background: linear-gradient(160deg, #0b0f14, #131a24 70%);
       margin: 0;
-      padding: 0;
+      padding: 2rem 0;
       display: flex;
-      flex-direction: column;
-      min-height: 100vh;
       justify-content: center;
       align-items: center;
-      color: #e0e0e0;
+      color: #e6edf7;
     }
     .container {
-      background: #1e1e1e;
-      padding: 2rem 3rem;
-      border-radius: 10px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-      max-width: 600px;
+      background: rgba(24, 28, 38, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 2rem;
+      border-radius: 14px;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+      max-width: 720px;
       width: 95%;
-      text-align: center;
     }
     h1 {
-      font-size: 1.6rem;
-      margin-bottom: 1.2rem;
-      color: #f5f5f5;
+      font-size: 1.7rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      color: #2dd4bf;
+      font-weight: 600;
     }
     section {
-      margin: 1.5rem 0;
+      margin: 1rem 0;
       padding: 1rem;
-      border: 1px solid #333;
-      border-radius: 8px;
-      background: #181818;
-      text-align: left;
+      border-radius: 10px;
+      background: #1a1f29;
+      box-shadow: inset 0 0 4px rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
     }
     h2 {
-      font-size: 1.1rem;
-      margin-bottom: 0.5rem;
-      color: #e0e0e0;
+      font-size: 1.05rem;
+      margin-bottom: 0.8rem;
+      color: #d1d5db;
+      border-left: 3px solid #2dd4bf;
+      padding-left: 0.5rem;
+      font-weight: 500;
     }
     label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #bbbbbb;
+      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+      color: #aab3c5;
     }
     input[type="date"] {
-      padding: 0.6rem;
-      font-size: 1rem;
-      border: 1px solid #444;
+      padding: 0.55rem;
+      font-size: 0.95rem;
+      border: 1px solid #333a48;
       border-radius: 6px;
+      background: #262e3f;
+      color: #f1f5f9;
       margin-bottom: 0.6rem;
-      background: #2a2a2a;
-      color: #ddd;
+      outline: none;
+    }
+    input[type="date"]:focus {
+      border-color: #2dd4bf;
     }
     input[type="date"]::-webkit-calendar-picker-indicator {
       filter: invert(1);
+      cursor: pointer;
     }
     button {
-      background: linear-gradient(90deg, #0057b8, #003f88);
+      background: linear-gradient(90deg, #2dd4bf, #0d9488);
       color: white;
-      padding: 0.7rem 1.2rem;
+      padding: 0.65rem 1.2rem;
       border: none;
       border-radius: 6px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
-      transition: opacity 0.3s ease;
-      margin-top: 0.5rem;
+      transition: all 0.2s ease;
+      margin-top: 0.3rem;
     }
     button:hover {
-      opacity: 0.85;
+      opacity: 0.9;
+      transform: translateY(-1px);
     }
     .btn-download {
-      display: block;
       width: 100%;
       margin-top: 1rem;
-      padding: 1rem;
+      padding: 0.8rem;
       font-size: 1rem;
+      border-radius: 8px;
     }
     #datesList {
       margin-top: 0.5rem;
-      font-size: 0.9rem;
-      color: #ddd;
+      font-size: 0.85rem;
+      color: #d1d5db;
     }
     #datesList span {
       display: inline-block;
-      background: #333;
-      padding: 0.3rem 0.6rem;
-      border-radius: 4px;
+      background: #2a3446;
+      padding: 0.25rem 0.55rem;
+      border-radius: 5px;
       margin: 0.2rem;
+      color: #2dd4bf;
+      font-size: 0.8rem;
+      border: 1px solid rgba(45,212,191,0.3);
     }
     #status {
       margin-top: 1rem;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       min-height: 20px;
       text-align: center;
     }
-    #status.loading { color: #ffb74d; }
-    #status.success { color: #66bb6a; }
-    #status.error { color: #ef5350; }
+    #status.loading { color: #fbbf24; }
+    #status.success { color: #2dd4bf; }
+    #status.error { color: #ef4444; }
+
+    /* Progress */
+    .progress-wrapper {
+      margin-top: 1.2rem;
+    }
+    .progress-label {
+      font-size: 0.9rem;
+      color: #aab3c5;
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+    }
     .progress-container {
       width: 100%;
-      background: #333;
-      border-radius: 5px;
+      background: #2a3446;
+      border-radius: 6px;
+      height: 20px;
       overflow: hidden;
-      margin-top: 1rem;
     }
     .progress-bar {
-      height: 20px;
+      height: 100%;
       width: 0%;
-      background: #4caf50;
+      background: linear-gradient(90deg, #2dd4bf, #0d9488);
       text-align: center;
-      font-size: 0.8rem;
-      color: white;
-      transition: width 0.3s;
+      font-size: 0.75rem;
+      color: #fff;
+      transition: width 0.3s ease;
     }
+
+    /* Status list */
     #statusList {
       margin-top: 1rem;
       text-align: left;
-      font-size: 0.85rem;
-      max-height: 200px;
+      font-size: 0.8rem;
+      max-height: 160px;
       overflow-y: auto;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 0.5rem;
     }
-    #statusList div.success { color: #66bb6a; }
-    #statusList div.skipped { color: #888; }
-    #statusList div.error { color: #ef5350; }
-    footer {
-      margin-top: 2rem;
-      font-size: 0.75rem;
-      color: #777;
-      text-align: center;
-    }
+    #statusList div.success { color: #2dd4bf; }
+    #statusList div.skipped { color: #9ca3af; }
+    #statusList div.error { color: #ef4444; }
   </style>
 </head>
 <body>
@@ -172,15 +194,17 @@
     </section>
 
     <div id="status"></div>
-    <div class="progress-container">
-      <div class="progress-bar" id="progressBar">0%</div>
+
+    <!-- Progress bar with label -->
+    <div class="progress-wrapper">
+      <div class="progress-label">Progress</div>
+      <div class="progress-container">
+        <div class="progress-bar" id="progressBar">0%</div>
+      </div>
     </div>
+
     <div id="statusList"></div>
   </div>
-
-  <footer>
-    © 2025 Your Trading Firm. All rights reserved.
-  </footer>
 
   <script>
     const API_BASE = "/api/fno-bhavcopy";
@@ -198,18 +222,15 @@
       progressBar.style.width = percent + "%";
       progressBar.textContent = percent + "%";
     }
-
     function addStatus(date, msg, cls) {
       const row = document.createElement("div");
       row.textContent = `${date}: ${msg}`;
       row.className = cls;
       statusList.appendChild(row);
     }
-
     function formatDate(date) {
       return date.toISOString().split("T")[0];
     }
-
     async function fetchAndDownload(dateStr) {
       const response = await fetch(`${API_BASE}?date_str=${dateStr}`);
       if (!response.ok) throw new Error("Unavailable");
@@ -223,91 +244,79 @@
       a.remove();
     }
 
-    // ---- SINGLE DATE ----
     async function downloadSingle() {
       const date = document.getElementById("singleDate").value;
       if (!date) return;
-      try {
-        status.textContent = "⏳ Fetching...";
-        status.className = "loading";
+      progressBar.style.width="0%";
+      progressBar.textContent="0%";
+      statusList.innerHTML="";
+      try{
+        status.textContent="⏳ Fetching...";
+        status.className="loading";
         await fetchAndDownload(date);
-        status.textContent = "✅ Download complete.";
-        status.className = "success";
-      } catch {
-        status.textContent = "❌ File unavailable.";
-        status.className = "error";
+        updateProgress(1,1);
+        addStatus(date,"Downloaded","success");
+        status.textContent="✅ Download complete.";
+        status.className="success";
+      }catch{
+        updateProgress(1,1);
+        addStatus(date,"Unavailable","error");
+        status.textContent="❌ File unavailable.";
+        status.className="error";
       }
     }
 
-    // ---- RANGE ----
     async function downloadRange() {
-      const fromDate = document.getElementById("fromDate").value;
-      const toDate = document.getElementById("toDate").value;
-      if (!fromDate || !toDate) return;
-
-      const from = new Date(fromDate);
-      const to = new Date(toDate);
-      if (from > to) return;
-
-      let current = new Date(from);
-      const dates = [];
-      while (current <= to) {
-        dates.push(formatDate(current));
-        current.setDate(current.getDate() + 1);
-      }
-
+      const fromDate=document.getElementById("fromDate").value;
+      const toDate=document.getElementById("toDate").value;
+      if(!fromDate||!toDate)return;
+      const from=new Date(fromDate);
+      const to=new Date(toDate);
+      if(from>to)return;
+      let cur=new Date(from); const dates=[];
+      while(cur<=to){dates.push(formatDate(cur));cur.setDate(cur.getDate()+1);}
       await batchDownload(dates);
     }
 
-    // ---- ARBITRARY ----
-    let selectedDates = [];
-    function addDate() {
-      const d = document.getElementById("pickDate").value;
-      if (d && !selectedDates.includes(d)) {
-        selectedDates.push(d);
-      }
+    let selectedDates=[];
+    function addDate(){
+      const d=document.getElementById("pickDate").value;
+      if(d&&!selectedDates.includes(d))selectedDates.push(d);
       updateDatesList();
     }
-    function updateDatesList() {
-      const el = document.getElementById("datesList");
-      el.innerHTML = selectedDates.length
-        ? selectedDates.map(d => `<span>${d}</span>`).join(" ")
-        : "(No dates added)";
+    function updateDatesList(){
+      const el=document.getElementById("datesList");
+      el.innerHTML=selectedDates.length?
+        selectedDates.map(d=>`<span>${d}</span>`).join(" "):
+        "(No dates added)";
     }
-    async function downloadArbitrary() {
-      if (selectedDates.length === 0) return;
+    async function downloadArbitrary(){
+      if(selectedDates.length===0)return;
       await batchDownload(selectedDates);
     }
 
-    // ---- BATCH DOWNLOAD WITH PROGRESS ----
-    async function batchDownload(dates) {
-      progressBar.style.width = "0%";
-      progressBar.textContent = "0%";
-      statusList.innerHTML = "";
-      status.textContent = "⏳ Downloading...";
-      status.className = "loading";
+    async function batchDownload(dates){
+      progressBar.style.width="0%";
+      progressBar.textContent="0%";
+      statusList.innerHTML="";
+      status.textContent="⏳ Downloading...";
+      status.className="loading";
 
-      let completed = 0;
-      const total = dates.length;
-
-      for (const d of dates) {
-        const day = new Date(d).getDay();
-        if (day === 0 || day === 6) { // Weekend
-          addStatus(d, "Skipped (Weekend)", "skipped");
-        } else {
-          try {
-            await fetchAndDownload(d);
-            addStatus(d, "Downloaded", "success");
-          } catch {
-            addStatus(d, "Unavailable", "error");
-          }
+      let completed=0;
+      const total=dates.length;
+      for(const d of dates){
+        const day=new Date(d).getDay();
+        if(day===0||day===6){
+          addStatus(d,"Skipped (Weekend)","skipped");
+        }else{
+          try{await fetchAndDownload(d);addStatus(d,"Downloaded","success");}
+          catch{addStatus(d,"Unavailable","error");}
         }
         completed++;
-        updateProgress(completed, total);
+        updateProgress(completed,total);
       }
-
-      status.textContent = "✅ Done. See details below.";
-      status.className = "success";
+      status.textContent="✅ Done. See details below.";
+      status.className="success";
     }
   </script>
 </body>
